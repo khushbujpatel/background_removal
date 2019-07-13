@@ -16,19 +16,32 @@ if __name__ == "__main__":
     parser.add_argument("--display_resolution", help="display resolution (WxH)", type=int, nargs=2, default=[320, 240])
     parser.add_argument("--monochrome", help="use monochrome frames", action="store_true", default=False)
     parser.add_argument("--debug_visualize", help="enable debug windows to view masks", action="store_true", default=False)
+    parser.add_argument("--target_path", help="resultant video dump target path", type=str, default=None)
     args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO)
+
+    logging.info("Display Properties: [fps: {}, display_resolution: {}x{}, monochrome: {}]".format(
+        args.fps, args.display_resolution[0], args.display_resolution[1], args.monochrome))
 
     if not os.path.exists(args.video_path):
         raise Exception("Unable to locate {}".format(args.video_path))
 
-    logging.basicConfig(level=logging.INFO)
+    if not args.target_path:
+        target_path = args.video_path.split(".")[0] + "_processed.avi"
+    else:
+        target_path = args.target_path
 
+    # Open Video Writer
+    writer = cv2.VideoWriter()
+    writer.open(target_path, cv2.VideoWriter_fourcc(*'XVID'), int(args.fps), tuple(args.display_resolution), isColor=not args.monochrome)
+    if not writer.isOpened():
+        raise Exception("Unable to open {}".format(target_path))
+
+    # Open Video Reader
     cap = cv2.VideoCapture(args.video_path)
     if not cap.isOpened():
         raise Exception("Unable to open {}".format(args.video_path))
-
-    logging.info("Display Properties: [fps: {}, display_resolution: {}x{}, monochrome: {}]".format(
-        args.fps, args.display_resolution[0], args.display_resolution[1], args.monochrome))
 
     cap.set(cv2.CAP_PROP_FPS, args.fps)
 
@@ -45,6 +58,9 @@ if __name__ == "__main__":
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         fg = fg_extractor.extract(image, args.debug_visualize)
+
+        # write to file
+        writer.write(fg)
 
         # visualize
         fg = cv2.resize(fg, tuple(args.display_resolution))
@@ -65,5 +81,6 @@ if __name__ == "__main__":
             cv2.waitKey(0)
             back_flag = True
 
+    writer.release()
     cap.release()
     cv2.destroyAllWindows()
