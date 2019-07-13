@@ -33,9 +33,9 @@ if __name__ == "__main__":
     cap.set(cv2.CAP_PROP_FPS, args.fps)
 
     fg_extractor = ForegroundExtraction()
-
+    back_flag = False
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    for _ in range(total_frames):
+    for i in range(total_frames):
 
         ret, image = cap.read()
         if ret == 0:
@@ -49,13 +49,21 @@ if __name__ == "__main__":
         # visualize
         fg = cv2.resize(fg, tuple(args.display_resolution))
         cv2.imshow("foreground", fg)
+        cv2.imshow("input", image)
 
         # wait
-        key = cv2.waitKey(10)
+        if back_flag == True:
+            cv2.waitKey(0)
+            back_flag = False
+        key = cv2.waitKey(100)
         if key == 27:
             break
-        if key == 32:
+        if key == ord('p'):
             cv2.waitKey(0)
+        if key == ord('b'):
+            cap.set(cv2.CAP_PROP_POS_FRAMES, i - 10)
+            cv2.waitKey(0)
+            back_flag = True
 
     cap.release()
     cv2.destroyAllWindows()
