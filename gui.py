@@ -1,14 +1,12 @@
 #! /usr/bin/python3
 
-# import the necessary packages
 from tkinter import *
-from PIL import Image
-from PIL import ImageTk
 from tkinter import filedialog
+
 import cv2
+from PIL import Image, ImageTk
 
 from fg_extractor import ForegroundExtraction
-
 
 
 class Application:
