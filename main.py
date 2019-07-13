@@ -28,7 +28,7 @@ if __name__ == "__main__":
         raise Exception("Unable to locate {}".format(args.video_path))
 
     if not args.target_path:
-        target_path = args.video_path.split(".")[0] + "_processed.avi"
+        target_path = args.video_path.split(".")[0] + "_processed.mp4"
     else:
         target_path = args.target_path
 
