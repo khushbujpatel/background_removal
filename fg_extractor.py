@@ -37,7 +37,10 @@ class ForegroundExtraction:
         cv2.drawContours(fgmask, contours, -1, 255, -1)
 
         # prepare result
-        fg[fgmask == 0] = [0, 0, 0]
+        if (len(image.shape) == 2):
+            fg[fgmask == 0] = 0
+        else:
+            fg[fgmask == 0] = [0, 0, 0]
 
         # visualize
         if debug_visualize:

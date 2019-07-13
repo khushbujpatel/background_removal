@@ -11,9 +11,10 @@ from fg_extractor import ForegroundExtraction
 if __name__ == "__main__":
     # read args
     parser = argparse.ArgumentParser()
-    parser.add_argument("--video_path", help="video file", type=str, required=True)
-    parser.add_argument("--fps", help="fps", type=int, default=30)
+    parser.add_argument("--video_path", help="video file", type=str, default="sample/video_1.mp4")
+    parser.add_argument("--fps", help="frame rate", type=int, default=30)
     parser.add_argument("--display_resolution", help="display resolution (WxH)", type=int, nargs=2, default=[320, 240])
+    parser.add_argument("--monochrome", help="use monochrome frames", action="store_true", default=False)
     parser.add_argument("--debug_visualize", help="enable debug windows to view masks", action="store_true", default=False)
     args = parser.parse_args()
 
@@ -26,6 +27,11 @@ if __name__ == "__main__":
     if not cap.isOpened():
         raise Exception("Unable to open {}".format(args.video_path))
 
+    logging.info("Display Properties: [fps: {}, display_resolution: {}x{}, monochrome: {}]".format(
+        args.fps, args.display_resolution[0], args.display_resolution[1], args.monochrome))
+
+    cap.set(cv2.CAP_PROP_FPS, args.fps)
+
     fg_extractor = ForegroundExtraction()
 
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -35,13 +41,17 @@ if __name__ == "__main__":
         if ret == 0:
             break
 
+        if args.monochrome:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
         fg = fg_extractor.extract(image, args.debug_visualize)
 
         # visualize
+        fg = cv2.resize(fg, tuple(args.display_resolution))
         cv2.imshow("foreground", fg)
 
         # wait
-        key = cv2.waitKey(100)
+        key = cv2.waitKey(10)
         if key == 27:
             break
         if key == 32:
