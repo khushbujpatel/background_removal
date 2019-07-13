@@ -77,7 +77,7 @@ if __name__ == "__main__":
         if key == ord('p'):
             cv2.waitKey(0)
         if key == ord('b'):
-            cap.set(cv2.CAP_PROP_POS_FRAMES, i - 10)
+            cap.set(cv2.CAP_PROP_POS_FRAMES, i - 1)
             cv2.waitKey(0)
             back_flag = True
 

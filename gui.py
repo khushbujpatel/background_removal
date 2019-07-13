@@ -7,61 +7,90 @@ from PIL import ImageTk
 from tkinter import filedialog
 import cv2
 
-def select_image():
-    # grab a reference to the image panels
-    global panelA, panelB
+from fg_extractor import ForegroundExtraction
 
-    # open a file chooser dialog and allow the user to select an input
-    # image
-    path = filedialog.askopenfilename()
-    # ensure a file path was selected
-    if len(path) > 0:
-        # load the image from disk, convert it to grayscale, and detect
-        # edges in it
-        image = cv2.imread(path)
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        edged = cv2.Canny(gray, 50, 100)
 
-        # OpenCV represents images in BGR order; however PIL represents
-        # images in RGB order, so we need to swap the channels
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # convert the images to PIL format...
-        image = Image.fromarray(image)
-        edged = Image.fromarray(edged)
+class Application:
 
-        # ...and then to ImageTk format
-        image = ImageTk.PhotoImage(image)
-        edged = ImageTk.PhotoImage(edged)
-                # if the panels are None, initialize them
-        if panelA is None or panelB is None:
-            # the first panel will store our original image
-            panelA = Label(image=image)
-            panelA.image = image
-            panelA.pack(side="left", padx=10, pady=10)
+    def __init__(self, video_path, fps=30):
+        self.frame_id = 0
+        self.root = Tk()
 
-            # while the second panel will store the edge map
-            panelB = Label(image=edged)
-            panelB.image = edged
-            panelB.pack(side="right", padx=10, pady=10)
+        self.prev_button = Button(self.root, text="Previous", command=self.prev_frame)
+        self.pause_button = Button(self.root, text="Pause", command=self.pause_frame)
+        self.play_button = Button(self.root, text="Play", command=self.play_frame)
 
-        # otherwise, update the image panels
-        else:
-            # update the pannels
-            panelA.configure(image=image)
-            panelB.configure(image=edged)
-            panelA.image = image
-            panelB.image = edged
-# initialize the window toolkit along with the two image panels
-root = Tk()
-panelA = None
-panelB = None
+        self.prev_button.pack(side="bottom")
+        self.pause_button.pack(side="bottom")
+        self.play_button.pack(side="bottom")
 
-# create a button, then when pressed, will trigger a file chooser
-# dialog and allow the user to select an input image; then add the
-# button the GUI
-btn = Button(root, text="Select an image", command=select_image)
-btn.pack(side="bottom", fill="both", expand="yes", padx="10", pady="10")
+        self.panel = None
 
-# kick off the GUI
-root.mainloop()
+        self.fps = fps
+        self.pause = False
+
+        # Open Video Reader
+        self.cap = cv2.VideoCapture(video_path)
+        if not self.cap.isOpened():
+            raise Exception("Unable to open {}".format(video_path))
+
+        self.fg_extractor = ForegroundExtraction()
+
+        if self.pause:
+            self.video_loop()
+
+    def prev_frame(self):
+        self.frame_id -= 2
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_id)
+        self.video_loop()
+
+    def pause_frame(self):
+        self.pause = True
+        self.video_loop()
+
+    def play_frame(self):
+        self.pause = False
+        self.video_loop()
+
+    def video_loop(self):
+        ret, image = self.cap.read()
+        if ret:
+            # extract foreground
+            fg = self.fg_extractor.extract(image)
+
+            # write frame number
+            cv2.putText(fg, "frame {}".format(self.frame_id), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 255, 100), 1, cv2.LINE_AA)
+
+            # load in gui
+            tkimage = cv2.cvtColor(fg, cv2.COLOR_BGR2RGB)
+            tkimage = Image.fromarray(tkimage)
+            tkimage = ImageTk.PhotoImage(tkimage)
+
+            # init panel
+            if self.panel is None:
+                self.panel = Label(image=tkimage)
+                self.panel.image = tkimage
+                self.panel.pack(side="left", padx=10, pady=10)
+
+            # otherwise, simply update the panel
+            else:
+                self.panel.configure(image=tkimage)
+                self.panel.image = tkimage
+
+            self.frame_id += 1
+
+            if not self.pause:
+                self.root.after(self.fps, self.video_loop)
+
+    def launch(self):
+        self.root.mainloop()
+
+    def __del__(self):
+        self.cap.release()
+        self.root.quit()
+
+
+if __name__ == "__main__":
+    app = Application("sample/video_1.mp4")
+    app.launch()
